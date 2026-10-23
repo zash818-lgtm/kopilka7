@@ -1,0 +1,298 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<title>Мои траты</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<style>
+:root{
+  --bg:var(--tg-theme-bg-color,#fff);--text:var(--tg-theme-text-color,#111);
+  --hint:var(--tg-theme-hint-color,#8e8e93);--accent:var(--tg-theme-button-color,#2ea6ff);
+  --on-accent:var(--tg-theme-button-text-color,#fff);--card:var(--tg-theme-secondary-bg-color,#f2f2f7);
+  --danger:var(--tg-theme-destructive-text-color,#e5484d);
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{background:var(--bg)}
+body{margin:0;color:var(--text);font:15px/1.4 -apple-system,system-ui,"Segoe UI",Roboto,sans-serif;padding:12px 14px calc(90px + env(safe-area-inset-bottom))}
+button{font-family:inherit;cursor:pointer}
+.hidden{display:none!important}
+.nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.nav h1{font-size:18px;margin:0;font-weight:600}
+.icon{width:40px;height:40px;border-radius:12px;border:0;background:var(--card);color:var(--text);font-size:22px;line-height:1}
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px}
+.stat{background:var(--card);border-radius:14px;padding:10px 12px}
+.stat span{display:block;font-size:12px;color:var(--hint)}
+.stat b{font-size:19px;font-weight:600}
+.weekdays,.grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px}
+.weekdays{font-size:11px;color:var(--hint);text-align:center;margin-bottom:4px}
+.cell{aspect-ratio:1/1.1;border:0;border-radius:10px;background:var(--card);color:var(--text);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0;transition:transform .1s}
+.cell:active{transform:scale(.94)}
+.cell .dn{font-size:14px;font-weight:500}
+.cell .ds{font-size:10px;min-height:12px;opacity:.85}
+.cell.today .dn{color:var(--accent);font-weight:700}
+.cell.sel{background:var(--accent)!important;color:var(--on-accent)}
+.cell.sel .dn{color:var(--on-accent)}
+section{margin-top:20px}
+h2{font-size:16px;margin:0 0 8px;font-weight:600}
+.dayhead{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.dayhead span{color:var(--hint);font-size:14px;white-space:nowrap}
+.row{width:100%;display:flex;align-items:center;gap:10px;border:0;background:var(--card);color:var(--text);border-radius:12px;padding:10px 12px;margin-bottom:6px;text-align:left;font-size:15px}
+.emo{font-size:20px;width:26px;text-align:center}
+.rt{flex:1;min-width:0;display:flex;flex-direction:column}
+.rt b{font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rt small{color:var(--hint);font-size:12px}
+.ra{font-weight:600;white-space:nowrap}
+.cat{margin-bottom:10px}
+.cat .top{display:flex;justify-content:space-between;gap:8px;font-size:14px;margin-bottom:4px}
+.cat .top span:last-child{color:var(--hint);white-space:nowrap}
+.bar{height:6px;border-radius:3px;background:var(--card);overflow:hidden}
+.bar i{display:block;height:100%;background:var(--accent);border-radius:3px}
+.empty{color:var(--hint);font-size:14px;margin:6px 0}
+.fab{position:fixed;left:14px;right:14px;bottom:calc(14px + env(safe-area-inset-bottom));height:50px;border:0;border-radius:14px;background:var(--accent);color:var(--on-accent);font-size:16px;font-weight:600;z-index:5}
+.sheet{position:fixed;inset:0;z-index:10}
+.sheet-bg{position:absolute;inset:0;background:rgba(0,0,0,.45)}
+.sheet-body{position:absolute;left:0;right:0;bottom:0;background:var(--bg);border-radius:18px 18px 0 0;padding:16px 14px calc(16px + env(safe-area-inset-bottom));max-height:92vh;overflow:auto;animation:up .2s ease-out}
+@keyframes up{from{transform:translateY(40px);opacity:.4}to{transform:none;opacity:1}}
+.sheet-body h3{margin:0 0 4px;font-size:17px}
+label{display:block;font-size:12px;color:var(--hint);margin:12px 0 5px}
+input{width:100%;height:46px;border-radius:12px;border:0;background:var(--card);color:var(--text);padding:0 12px;font-size:16px;font-family:inherit;outline:none}
+input:focus{box-shadow:0 0 0 2px var(--accent)}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{border:0;border-radius:18px;padding:7px 11px;background:var(--card);color:var(--text);font-size:13px}
+.chip.on{background:var(--accent);color:var(--on-accent)}
+.actions{display:flex;gap:8px;margin-top:18px}
+.btn{flex:1;height:48px;border:0;border-radius:12px;font-size:15px;font-weight:600}
+.btn.primary{background:var(--accent);color:var(--on-accent)}
+.btn.danger{background:var(--card);color:var(--danger);flex:0 0 auto;padding:0 16px}
+.notice{text-align:center;padding:40px 10px;color:var(--hint)}
+.toast{position:fixed;left:50%;top:14px;transform:translateX(-50%);background:var(--text);color:var(--bg);padding:8px 14px;border-radius:10px;font-size:14px;z-index:20}
+</style>
+</head>
+<body>
+<div id="app">
+  <header class="nav">
+    <button id="prev" class="icon" aria-label="Предыдущий месяц">‹</button>
+    <h1 id="monthTitle"></h1>
+    <button id="next" class="icon" aria-label="Следующий месяц">›</button>
+  </header>
+
+  <div class="stats">
+    <div class="stat"><span>За месяц, сум</span><b id="sMonth">0</b></div>
+    <div class="stat"><span id="sDayLabel">Сегодня, сум</span><b id="sDay">0</b></div>
+  </div>
+
+  <div class="weekdays"><div>Пн</div><div>Вт</div><div>Ср</div><div>Чт</div><div>Пт</div><div>Сб</div><div>Вс</div></div>
+  <div id="grid" class="grid"></div>
+
+  <section>
+    <div class="dayhead"><h2 id="dayTitle"></h2><span id="dayTotal"></span></div>
+    <div id="dayList"></div>
+  </section>
+
+  <section>
+    <h2>По категориям за месяц</h2>
+    <div id="cats"></div>
+  </section>
+</div>
+
+<div id="notice" class="notice hidden"></div>
+<button id="addBtn" class="fab">+ Добавить трату</button>
+
+<div id="sheet" class="sheet hidden">
+  <div class="sheet-bg" id="sheetBg"></div>
+  <form class="sheet-body" id="form" autocomplete="off">
+    <h3 id="sheetTitle">Новая трата</h3>
+    <label for="fTitle">Название</label>
+    <input id="fTitle" maxlength="60" placeholder="Стрижка">
+    <label for="fAmount">Сумма, сум</label>
+    <input id="fAmount" inputmode="numeric" placeholder="200 000">
+    <label>Категория</label>
+    <div id="chips" class="chips"></div>
+    <label for="fDate">Дата</label>
+    <input id="fDate" type="date">
+    <div class="actions">
+      <button type="button" id="delBtn" class="btn danger">Удалить</button>
+      <button type="submit" class="btn primary">Сохранить</button>
+    </div>
+  </form>
+</div>
+
+<script>
+const tg = window.Telegram && window.Telegram.WebApp;
+const MONTHS = ['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
+const MONTHS_GEN = ['января','февраля','марта','апреля','мая','июня','июля','августа','сентября','октября','ноября','декабря'];
+const $ = id => document.getElementById(id);
+const pad = n => String(n).padStart(2, '0');
+const iso = (y, m, d) => `${y}-${pad(m)}-${pad(d)}`;
+const fmt = n => Math.round(n).toLocaleString('ru-RU').replace(/[\u00a0\u202f]/g, ' ');
+const short = n => n >= 1e6 ? (Math.round(n / 1e5) / 10 + 'м').replace('.', ',') : n >= 1e3 ? Math.round(n / 1e3) + 'к' : String(n);
+
+const now = new Date();
+const state = { y: now.getFullYear(), m: now.getMonth() + 1, items: [], cats: {}, today: iso(now.getFullYear(), now.getMonth() + 1, now.getDate()), sel: '', editId: null, cat: 'Другое' };
+
+const can = v => tg && tg.isVersionAtLeast && tg.isVersionAtLeast(v);
+function haptic(kind) { try { kind === 'success' || kind === 'error' ? tg.HapticFeedback.notificationOccurred(kind) : tg.HapticFeedback.impactOccurred(kind || 'light'); } catch (e) {} }
+function toast(text) { const t = document.createElement('div'); t.className = 'toast'; t.textContent = text; document.body.appendChild(t); setTimeout(() => t.remove(), 2200); }
+function alertBox(text) { can('6.2') ? tg.showAlert(text) : alert(text); }
+function confirmBox(text, cb) { can('6.2') ? tg.showConfirm(text, cb) : cb(confirm(text)); }
+
+async function api(path, opts = {}) {
+  const r = await fetch(path, { ...opts, headers: { 'Content-Type': 'application/json', 'X-Init-Data': (tg && tg.initData) || '' } });
+  if (!r.ok) throw new Error(r.status === 401 ? 'auth' : await r.text());
+  return r.json();
+}
+
+async function load() {
+  try {
+    const d = await api(`/api/expenses?month=${state.y}-${pad(state.m)}`);
+    state.items = d.items; state.cats = d.categories; state.today = d.today;
+    if (!state.sel || !state.sel.startsWith(`${state.y}-${pad(state.m)}`)) {
+      state.sel = state.today.startsWith(`${state.y}-${pad(state.m)}`) ? state.today : iso(state.y, state.m, 1);
+    }
+    render();
+  } catch (e) {
+    if (e.message === 'auth') showNotice('Открой календарь через бота в Telegram.');
+    else toast('Нет связи с сервером');
+  }
+}
+
+function showNotice(text) {
+  $('app').classList.add('hidden'); $('addBtn').classList.add('hidden');
+  $('notice').textContent = text; $('notice').classList.remove('hidden');
+}
+
+function render() {
+  const { y, m } = state;
+  $('monthTitle').textContent = `${MONTHS[m - 1]} ${y}`;
+
+  const byDay = {}, byCat = {}; let total = 0;
+  for (const it of state.items) {
+    byDay[it.date] = (byDay[it.date] || 0) + it.amount;
+    byCat[it.category] = (byCat[it.category] || 0) + it.amount;
+    total += it.amount;
+  }
+  $('sMonth').textContent = fmt(total);
+
+  const max = Math.max(1, ...Object.values(byDay));
+  const first = (new Date(y, m - 1, 1).getDay() + 6) % 7;
+  const days = new Date(y, m, 0).getDate();
+  const g = $('grid'); g.innerHTML = '';
+  for (let i = 0; i < first; i++) g.appendChild(document.createElement('div'));
+  for (let d = 1; d <= days; d++) {
+    const key = iso(y, m, d), sum = byDay[key] || 0;
+    const b = document.createElement('button');
+    b.className = 'cell' + (key === state.sel ? ' sel' : '') + (key === state.today ? ' today' : '');
+    if (sum) b.style.background = `color-mix(in srgb, var(--accent) ${Math.round(14 + 46 * sum / max)}%, var(--card))`;
+    b.innerHTML = `<span class="dn">${d}</span><span class="ds">${sum ? short(sum) : ''}</span>`;
+    b.onclick = () => { state.sel = key; haptic(); render(); };
+    g.appendChild(b);
+  }
+
+  const [, sm, sd] = state.sel.split('-').map(Number);
+  const list = state.items.filter(i => i.date === state.sel);
+  const dayTotal = list.reduce((a, b) => a + b.amount, 0);
+  const isToday = state.sel === state.today;
+  $('dayTitle').textContent = `${sd} ${MONTHS_GEN[sm - 1]}${isToday ? ' · сегодня' : ''}`;
+  $('sDayLabel').textContent = isToday ? 'Сегодня, сум' : `${sd} ${MONTHS_GEN[sm - 1]}, сум`;
+  $('sDay').textContent = fmt(dayTotal);
+  $('dayTotal').textContent = dayTotal ? `${fmt(dayTotal)} сум` : '';
+
+  const dl = $('dayList'); dl.innerHTML = '';
+  if (!list.length) dl.innerHTML = '<p class="empty">Трат нет. Отправь голосовое боту или нажми «+».</p>';
+  for (const it of list) {
+    const r = document.createElement('button'); r.className = 'row';
+    r.innerHTML = `<span class="emo"></span><span class="rt"><b></b><small></small></span><span class="ra">${fmt(it.amount)}</span>`;
+    r.querySelector('.emo').textContent = state.cats[it.category] || '📦';
+    r.querySelector('b').textContent = it.title;
+    r.querySelector('small').textContent = it.category;
+    r.onclick = () => openSheet(it);
+    dl.appendChild(r);
+  }
+
+  const c = $('cats'); c.innerHTML = '';
+  const entries = Object.entries(byCat).sort((a, b) => b[1] - a[1]);
+  if (!entries.length) c.innerHTML = '<p class="empty">Пока пусто</p>';
+  for (const [name, sum] of entries) {
+    const pct = total ? Math.round(sum / total * 100) : 0;
+    const el = document.createElement('div'); el.className = 'cat';
+    el.innerHTML = `<div class="top"><span></span><span>${fmt(sum)} · ${pct}%</span></div><div class="bar"><i style="width:${Math.max(pct, 2)}%"></i></div>`;
+    el.querySelector('.top span').textContent = `${state.cats[name] || '📦'} ${name}`;
+    c.appendChild(el);
+  }
+}
+
+function renderChips() {
+  const box = $('chips'); box.innerHTML = '';
+  for (const [name, emo] of Object.entries(state.cats)) {
+    const b = document.createElement('button'); b.type = 'button';
+    b.className = 'chip' + (name === state.cat ? ' on' : '');
+    b.textContent = `${emo} ${name}`;
+    b.onclick = () => { state.cat = name; haptic(); renderChips(); };
+    box.appendChild(b);
+  }
+}
+
+function openSheet(it) {
+  state.editId = it ? it.id : null;
+  state.cat = it ? it.category : 'Другое';
+  $('sheetTitle').textContent = it ? 'Изменить трату' : 'Новая трата';
+  $('fTitle').value = it ? it.title : '';
+  $('fAmount').value = it ? fmt(it.amount) : '';
+  $('fDate').value = it ? it.date : state.sel;
+  $('delBtn').classList.toggle('hidden', !it);
+  renderChips();
+  $('sheet').classList.remove('hidden');
+  if (can('6.1')) tg.BackButton.show();
+  if (!it) setTimeout(() => $('fTitle').focus(), 150);
+}
+function closeSheet() {
+  $('sheet').classList.add('hidden');
+  if (can('6.1')) tg.BackButton.hide();
+  document.activeElement && document.activeElement.blur();
+}
+
+$('fAmount').addEventListener('input', e => {
+  const digits = e.target.value.replace(/\D/g, '').slice(0, 12);
+  e.target.value = digits ? fmt(Number(digits)) : '';
+});
+
+$('form').addEventListener('submit', async e => {
+  e.preventDefault();
+  const title = $('fTitle').value.trim();
+  const amount = parseInt($('fAmount').value.replace(/\D/g, ''), 10);
+  if (!title || !amount) { haptic('error'); return alertBox('Укажи название и сумму'); }
+  const body = { title, amount, category: state.cat, date: $('fDate').value || state.sel };
+  try {
+    if (state.editId) await api('/api/expenses/' + state.editId, { method: 'PATCH', body: JSON.stringify(body) });
+    else await api('/api/expenses', { method: 'POST', body: JSON.stringify(body) });
+    haptic('success'); closeSheet();
+    const [y, m] = body.date.split('-').map(Number);
+    state.y = y; state.m = m; state.sel = body.date;
+    await load();
+  } catch (err) { haptic('error'); toast('Не сохранилось, попробуй ещё раз'); }
+});
+
+$('delBtn').addEventListener('click', () => confirmBox('Удалить трату?', async ok => {
+  if (!ok) return;
+  try { await api('/api/expenses/' + state.editId, { method: 'DELETE' }); haptic('success'); closeSheet(); await load(); }
+  catch (e) { toast('Не удалилось'); }
+}));
+
+$('sheetBg').addEventListener('click', closeSheet);
+$('addBtn').addEventListener('click', () => openSheet(null));
+$('prev').addEventListener('click', () => { state.m--; if (state.m < 1) { state.m = 12; state.y--; } state.sel = ''; haptic(); load(); });
+$('next').addEventListener('click', () => { state.m++; if (state.m > 12) { state.m = 1; state.y++; } state.sel = ''; haptic(); load(); });
+document.addEventListener('visibilitychange', () => { if (!document.hidden) load(); });
+
+if (!tg || !tg.initData) {
+  showNotice('Открой календарь через бота в Telegram.');
+} else {
+  tg.ready(); tg.expand();
+  if (can('6.1')) { tg.BackButton.onClick(closeSheet); try { tg.setHeaderColor('bg_color'); } catch (e) {} }
+  if (tg.onEvent) tg.onEvent('activated', load);
+  load();
+}
+</script>
+</body>
+</html>
